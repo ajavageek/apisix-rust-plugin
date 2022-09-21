@@ -1,0 +1,10 @@
+routes:
+  - uri: /*
+    upstream:
+      type: roundrobin
+      nodes:
+        "httpbin.org:80": 1
+    plugins:
+      sample:
+       conf: "dummy"
+#END
