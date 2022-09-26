@@ -12,8 +12,11 @@ struct HttpCall;
 impl Context for HttpCall {}
 
 impl HttpContext for HttpCall {
-    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
-        warn!("on_http_request_headers");
+    fn on_http_response_headers(&mut self, _num_headers: usize, end_of_stream: bool) -> Action {
+        warn!("on_http_response_headers");
+        if end_of_stream {
+            self.add_http_response_header("Hello", "World");
+        }
         Action::Continue
     }
 }
