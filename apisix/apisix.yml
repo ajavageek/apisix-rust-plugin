@@ -13,6 +13,7 @@ routes:
                "Hello": "World",
                "X-Server": "$server_addr"
              }
-           }
+           },
+           "body": "Hello from Rust"
          }
 #END

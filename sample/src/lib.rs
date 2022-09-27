@@ -18,6 +18,7 @@ struct Headers {
 #[derive(Deserialize, Clone)]
 struct Config {
     headers: Headers,
+    body: String,
 }
 
 struct HttpCall {
@@ -58,6 +59,28 @@ impl HttpContext for HttpCall {
                     self.set_http_response_header(key, Some(&value));
                 }
             }
+            let body = &self.config.body;
+            if !body.is_empty() {
+                warn!("Rewrite body is configured, letting Nginx know about it");
+                self.set_property(vec!["wasm_process_resp_body"], Some("true".as_bytes()));
+                warn!("Rewrite body is configured, resetting Content-Length");
+                self.set_http_response_header("Content-Length", None)
+            }
+        }
+        Action::Continue
+    }
+
+    fn on_http_response_body(&mut self, _body_size: usize, end_of_stream: bool) -> Action {
+        warn!("on_http_response_body");
+        let body = &self.config.body;
+        if !body.is_empty() {
+            if end_of_stream {
+                warn!("Rewrite body is configured, rewriting {}", body);
+                let body = self.config.body.as_bytes();
+                self.set_http_response_body(0, body.len(),body);
+            } else {
+                return Action::Pause;
+            }
         }
         Action::Continue
     }
@@ -70,7 +93,7 @@ struct HttpCallRoot {
 impl Context for HttpCallRoot {}
 
 fn new_root() -> HttpCallRoot {
-    HttpCallRoot { config: Config { headers: Headers { add: None, set: None } } }
+    HttpCallRoot { config: Config { headers: Headers { add: None, set: None }, body: "".to_string() } }
 }
 
 impl RootContext for HttpCallRoot {
