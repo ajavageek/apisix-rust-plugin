@@ -11,7 +11,7 @@ routes:
            "headers": {
              "add": {
                "Hello": "World",
-               "Foo": "Bar"
+               "X-Server": "$server_addr"
              }
            }
          }

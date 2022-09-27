@@ -26,6 +26,20 @@ struct HttpCall {
 
 impl Context for HttpCall {}
 
+fn get_nginx_variable_if_possible(ctx: &HttpCall, value: &Value) -> String {
+    let value = value.as_str().unwrap();
+    if value.starts_with('$') {
+        let option = ctx.get_property(vec![&value[1..value.len()]])
+            .and_then(|bytes| String::from_utf8(bytes).ok());
+        return if let Some(nginx_value) = option {
+            nginx_value
+        } else {
+            value.to_string()
+        }
+    }
+    value.to_string()
+}
+
 impl HttpContext for HttpCall {
     fn on_http_response_headers(&mut self, _num_headers: usize, end_of_stream: bool) -> Action {
         warn!("on_http_response_headers");
@@ -33,13 +47,15 @@ impl HttpContext for HttpCall {
             if self.config.headers.add.is_some() {
                 let add_headers = self.config.headers.add.as_ref().unwrap();
                 for (key, value) in add_headers.into_iter() {
-                    self.add_http_response_header(key, value.as_str().unwrap());
+                    let value = get_nginx_variable_if_possible(self, value);
+                    self.add_http_response_header(key, value.as_str());
                 }
             }
             if self.config.headers.set.is_some() {
                 let set_headers = self.config.headers.set.as_ref().unwrap();
                 for (key, value) in set_headers.into_iter() {
-                    self.set_http_response_header(key, value.as_str());
+                    let value = get_nginx_variable_if_possible(self, value);
+                    self.set_http_response_header(key, Some(&value));
                 }
             }
         }
